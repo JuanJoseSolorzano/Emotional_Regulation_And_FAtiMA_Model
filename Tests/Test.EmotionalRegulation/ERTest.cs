@@ -35,6 +35,7 @@ namespace Test.EmotionalRegulation
         [TestMethod]
         public void TestSimulations()
         {
+            
             /// Load the path of the files FAtiMA
             var pathRoot = @"D:\RepoUnity\FAtiMA-Starter-Kit-01\Assets\StreamingAssets\SingleCharacter\";
             var pathScenarioSimple = pathRoot + "scenario4.json";
@@ -50,9 +51,11 @@ namespace Test.EmotionalRegulation
             player = _rpcList.First(a1 => a1.CharacterName.ToString() == "Player");
             //assumption: de user have chosen one
             //MOdificación 1.
-            LoadGame(player);
+            LoadGame(player); 
             do
             {
+                //al pasar muchas emociones positivas a través del revisar si es positiva o negativa la emoción, tal parece
+                // que se borra la emoción o el evento y se produce un null exception.
                 if (initialized)
                 {
                     IAction finalDecision = null;
@@ -67,7 +70,7 @@ namespace Test.EmotionalRegulation
                         //if (decision.Name.GetNTerm(4) == (Name)"GoToNeutral")
                         //return;
                         GO: /// Paso 1.- Mandamos la posible decisión del agente a la arquitectura de regulación emocional
-                        /// para generar una nueva decisión de ser necesario.
+                            /// para generar una nueva decisión de ser necesario.
                         if (agent.AgentName == rpc.CharacterName) { newDecision = agent.Regulates(decision); }
 
                         if (!(newDecision is null)) { decision = newDecision; }
@@ -84,7 +87,7 @@ namespace Test.EmotionalRegulation
                             finalDecision = decision;
 
                             //Write the decision
-                            Debug.Print(" " + initiatorAgent + " decided to " + decision.Name.ToString() + " towards " + decision.Target);
+                            Debug.Print("\n " + initiatorAgent + " decided to " + decision.Name.ToString() + " towards " + decision.Target);
 
                             break;
                         }
@@ -101,8 +104,13 @@ namespace Test.EmotionalRegulation
                     }
 
                 }
+                var pedro = _rpcList.Find(x => x.CharacterName == (Name)"Pedro");
+                var emoIntensity = pedro.GetAllActiveEmotions().Last().Intensity;
+                var typeEmo = pedro.GetAllActiveEmotions().Last().Type;
+
                 Debug.Print($"Nex state: {nextState}");
-            } while (nextState != "End");
+                Debug.Print($"Mood : {pedro.Mood} Emotion : {typeEmo} : {emoIntensity}");
+            } while (nextState != "End"); 
         }
         private void Effects(IAction finalAction, Name initiator)
         {
@@ -233,13 +241,25 @@ namespace Test.EmotionalRegulation
             /// that the agent will be able to avoid. All inputs are storagened in the class named RequiredData. As well as 
             /// is necessary set a personality to the character of FAtiMA, it is make with the class named PersonalityDTO.
 
-            PersonalityDTO personalityDTO = new PersonalityDTO() { Conscientiousness = 100 };
+            PersonalityDTO personalityDTO = new PersonalityDTO() { Conscientiousness = 100, MaxLevelEmotion = 5 };
 
             var emotionalAppraisalCharacter = character.m_emotionalAppraisalAsset.GetAllAppraisalRules().ToList();
             List<AppraisalRuleDTO> appRulesOfEvtToAvoid = new List<AppraisalRuleDTO>();
             ///Unfold the events into the Event Matching Template
             emotionalAppraisalCharacter.ForEach(ea => Debug.Print(ea.EventMatchingTemplate.ToString()));
+            
+            /// Consulta Linq para obtener las rules específicas.
+            var GetSpecificAppRules_RunAway = emotionalAppraisalCharacter.Where(x =>
+                                                    x.EventMatchingTemplate.GetNTerm(3) == (Name)"RunAway").ToList();
+
+            var GetSpecificAppRules_GoToSad = emotionalAppraisalCharacter.FindAll(x =>
+                                        x.EventMatchingTemplate.GetNTerm(3).GetFirstTerm() == (Name)"Speak").Where(x1=>
+                                        x1.EventMatchingTemplate.GetNTerm(3).GetNTerm(4) == (Name)"GoToSad").ToList();
+
+            
+            
             /// shows the Events Matching Template
+            /// Podría ser una forma de ingresar las rules the los diferentes tipos de eventos
             foreach (var appRule in emotionalAppraisalCharacter)
             {
                 var eventMatchingTemplate = appRule.EventMatchingTemplate;
@@ -270,22 +290,26 @@ namespace Test.EmotionalRegulation
             Debug.Print("EVENTS FOR ACTIONS :");
             emotionalAppraisalCharacter.ForEach(ea => Debug.Print(ea.EventMatchingTemplate.ToString()));
 
-            ActionsforEvent actionsfor = new ActionsforEvent
+            List<ActionsforEvent> actionsfor = new List<ActionsforEvent>()
             {
-                NameEventToReact = emotionalAppraisalCharacter.Find(x => x.EventMatchingTemplate.GetNTerm(3) == (Name)"RunAway"),
-                ActionsForEventER = new List<KeyValuePair<string, float>>() 
-                { 
-                    new KeyValuePair<string, float>("Stop",1f),
-                    new KeyValuePair<string, float>("RunFaster", -2f),
+                new ActionsforEvent
+                {
+                    EventName = (Name)"GoToSad",
+                    AppraisalRulesOfEvent = GetSpecificAppRules_GoToSad,
+                    ActionNameValue = new List<KeyValuePair<string, float>>()
+                    {
+                        new KeyValuePair<string, float>("Stop",1f),
+                        new KeyValuePair<string, float>("RunFaster", -2f),
+                    }
                 }
             };
  
-            RequiredData inputs = new RequiredData {  ActionsForEvent = actionsfor, IAT_FAtiMA = _iat  };
+            RequiredData inputs = new RequiredData { ActionsForEvent = actionsfor, IAT_FAtiMA = _iat  };
             ///The last thing is create the new agent with the personlity, for that, the class named BasedAgent linked the agent 
             ///create on FAtiMA, we need pass the character of FAtiMA, the new personality and the inputs. The next code shows that.
             ///
             agent = new BaseAgent(character, personalityDTO, inputs);
-            
+
         }
     }
 }
