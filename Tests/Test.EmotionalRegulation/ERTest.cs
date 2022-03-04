@@ -75,7 +75,7 @@ namespace Test.EmotionalRegulation
 
                         if (!(newDecision is null)) { decision = newDecision; }
                         ///the mood calculate seem bad
-
+                        //var str = agent.Results.StrategyApplied;
                         if (player.CharacterName == rpc.CharacterName)
                         {
                             HandlePlayerOptions(decision);
@@ -105,11 +105,15 @@ namespace Test.EmotionalRegulation
 
                 }
                 var pedro = _rpcList.Find(x => x.CharacterName == (Name)"Pedro");
-                var emoIntensity = pedro.GetAllActiveEmotions().Last().Intensity;
-                var typeEmo = pedro.GetAllActiveEmotions().Last().Type;
+                var allEmotions = pedro.GetAllActiveEmotions();
+                if (allEmotions.Any())
+                {
+                    var intensity = allEmotions.Last().Intensity;
+                    var typeEmo = allEmotions.Last().Type;
+                    Debug.Print($"Nex state: {nextState}");
+                    Debug.Print($"Mood : {pedro.Mood} Emotion : {typeEmo} : {intensity}");
+                }
 
-                Debug.Print($"Nex state: {nextState}");
-                Debug.Print($"Mood : {pedro.Mood} Emotion : {typeEmo} : {emoIntensity}");
             } while (nextState != "End"); 
         }
         private void Effects(IAction finalAction, Name initiator)
@@ -241,7 +245,7 @@ namespace Test.EmotionalRegulation
             /// that the agent will be able to avoid. All inputs are storagened in the class named RequiredData. As well as 
             /// is necessary set a personality to the character of FAtiMA, it is make with the class named PersonalityDTO.
 
-            PersonalityDTO personalityDTO = new PersonalityDTO() { Conscientiousness = 100, MaxLevelEmotion = 5 };
+            PersonalityDTO personalityDTO = new PersonalityDTO() { Openness = 100, MaxLevelEmotion = 5 };
 
             var emotionalAppraisalCharacter = character.m_emotionalAppraisalAsset.GetAllAppraisalRules().ToList();
             List<AppraisalRuleDTO> appRulesOfEvtToAvoid = new List<AppraisalRuleDTO>();
@@ -298,13 +302,13 @@ namespace Test.EmotionalRegulation
                     AppraisalRulesOfEvent = GetSpecificAppRules_GoToSad,
                     ActionNameValue = new List<KeyValuePair<string, float>>()
                     {
-                        new KeyValuePair<string, float>("Stop",1f),
+                        new KeyValuePair<string, float>("Screaming",1f),
                         new KeyValuePair<string, float>("RunFaster", -2f),
                     }
                 }
             };
  
-            RequiredData inputs = new RequiredData { ActionsForEvent = actionsfor, IAT_FAtiMA = _iat  };
+            RequiredData inputs = new RequiredData { EventsToAvoid = GetSpecificAppRules_GoToSad, ActionsForEvent = actionsfor, IAT_FAtiMA = _iat  };
             ///The last thing is create the new agent with the personlity, for that, the class named BasedAgent linked the agent 
             ///create on FAtiMA, we need pass the character of FAtiMA, the new personality and the inputs. The next code shows that.
             ///

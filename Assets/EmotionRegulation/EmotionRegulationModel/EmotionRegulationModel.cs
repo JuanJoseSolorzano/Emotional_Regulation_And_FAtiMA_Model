@@ -30,7 +30,7 @@ namespace EmotionRegulation.Components
 
         internal IAction newAction;
         LoadingEmotionalRegulation internalSettings;
-        RolePlayCharacterAsset character, auxCharacter;
+        RolePlayCharacterAsset character; //auxCharacter;
         PersonalityDTO personality;
         Name eventMatchingTemplate; 
         Name eventName;
@@ -73,8 +73,8 @@ namespace EmotionRegulation.Components
 
             var appRuleOfEvent = internalSettings.AppraisalRulesOfEvent;
             StrategiesOfAntecedents(appRuleOfEvent);
-            if (!successfulStrategy)
-                StrategiesOfResponse();
+            //if (!successfulStrategy)
+                //StrategiesOfResponse();
 
 
             if (successfulStrategy)
@@ -114,11 +114,11 @@ namespace EmotionRegulation.Components
                 
                 else
                 if (strategy == SITUATION_MODIFICATION && !successfulStrategy && existsActions)
-                { successfulStrategy = SituationModification(relatedActions.First(), RulesOfEvent); if (successfulStrategy) break; continue; }
+                { detectedStrategy++; successfulStrategy = SituationModification(relatedActions.First(), RulesOfEvent); if (successfulStrategy) break; continue; }
                 
                 else
                 if (strategy == ATTENTION_DEPLOYMENT && !successfulStrategy)
-                { successfulStrategy = AttentionDeployment(RulesOfEvent); if (successfulStrategy) break; continue; }
+                { detectedStrategy++; successfulStrategy = AttentionDeployment(RulesOfEvent); if (successfulStrategy) break; continue; }
                /*
                 else
                 if (strategy == COGNITIVE_CHANGE && !successfulStrategy && existsEvts)
@@ -285,9 +285,11 @@ namespace EmotionRegulation.Components
             float UnfitPersonality = (float)((personality.Neuroticism + personality.Agreeableness) / 2);
             float FitPersonality = (float)((personality.Conscientiousness + personality.Extraversion + personality.Openness) / 3);
 
-            var auxEA = new EmotionalAppraisalAsset();
-            auxCharacter = new RolePlayCharacterAsset() { m_emotionalAppraisalAsset = auxEA};
-            auxCharacter.Mood = character.Mood;
+            //var auxEA = new EmotionalAppraisalAsset();
+            //auxCharacter = new RolePlayCharacterAsset() { m_emotionalAppraisalAsset = auxEA};
+            //auxCharacter.Mood = character.Mood;
+
+            agent.auxCharacter.Mood = character.Mood;
 
             var _appraisalVariables = emotionInformation.SpecificAppVariables;
             var _appraisalVariablesCopy = emotionInformation.SpecificAppVariablesCopy;
@@ -314,7 +316,7 @@ namespace EmotionRegulation.Components
 
                     var decisionName = decision.Name;
                     var oldStyle = decisionName.GetNTerm(4);
-                    var newStyle = String.Concat(reaction.Key + "-TO-" + oldStyle);
+                    var newStyle = String.Concat(reaction.Key + "TO" + oldStyle);
                     newActionName = decisionName.SwapTerms(oldStyle, (Name)newStyle);
 
        
@@ -325,7 +327,7 @@ namespace EmotionRegulation.Components
                         /// Creo que la decision entre que acción es la que se va ejucutar iría aquí, en relación con la personalida.
                         var UnfitTanh = internalSettings.AppraisalFunction(_intensity, UnfitPersonality, 100, -(int)_valance);
                         var FitTanh = internalSettings.AppraisalFunction(_intensity, FitPersonality, 100, (int)_valance);
-                        var tanh = (UnfitTanh + FitTanh) / 2;
+                        var tanh = (UnfitTanh + FitTanh) + 2;//quite la división entre 2
                         oldAppraisal.Value = Name.BuildName(tanh);
                     }
                     var NewVariables = unionOfAppVariables.DistinctBy(name => name.Name).ToList();
@@ -350,21 +352,25 @@ namespace EmotionRegulation.Components
                         EventMatchingTemplate = newEMTAS,
                         AppraisalVariables = new AppraisalVariables(NewVariables)
                     };
-                    auxCharacter.m_emotionalAppraisalAsset.AddOrUpdateAppraisalRule(newAppRule);
+                    //auxCharacter.m_emotionalAppraisalAsset.AddOrUpdateAppraisalRule(newAppRule);
                     ///aqui entra el diálogo igual que en la primera estrategia.
-                    ///
+                    agent.auxCharacter.m_emotionalAppraisalAsset.AddOrUpdateAppraisalRule(newAppRule);
 
-                    _auxEvent = EventHelper.ActionEnd(auxCharacter.CharacterName, newActionName, decision.Target);
+
+                    _auxEvent = EventHelper.ActionEnd(agent.auxCharacter.CharacterName, newActionName, decision.Target);
 
                     Debug.Print("debug here L349" + this);
                     
                     ///No se genera emoción en el agente auxiliar
-                    auxCharacter.Perceive(_auxEvent);
+                    //auxCharacter.Perceive(_auxEvent);
                     Debug.Print("debug here L349" + this);
+                    agent.auxCharacter.Perceive(_auxEvent);
 
-
-                    _newEmotions = auxCharacter.GetAllActiveEmotions().ToList();
-                    var emoto = auxCharacter.GetAllActiveEmotions();
+                   //_newEmotions = auxCharacter.GetAllActiveEmotions().ToList();
+                    _newEmotions = agent.auxCharacter.GetAllActiveEmotions().ToList();
+                    agent.auxCharacter.ResetEmotionalState();
+                    agent.auxCharacter.ForgetEvent(0);
+                    agent.auxCharacter.m_emotionalAppraisalAsset.RemoveAppraisalRules(new List<AppraisalRuleDTO>() { newAppRule });
 
                     foreach (var _emo in _newEmotions)
                     {
@@ -396,7 +402,7 @@ namespace EmotionRegulation.Components
                         var utteranceId = dialogOfEvent.UtteranceId;
 
                         /// Update the new dialogAction
-                        var newUtterance = String.Concat($"Thinking('{utterance}')");
+                        var newUtterance = String.Concat($"{reaction.Key}:I don't think so dude !");
                         DialogueStateActionDTO newDialogStateAction = new DialogueStateActionDTO
                         {
                             CurrentState = currentState,
@@ -437,11 +443,20 @@ namespace EmotionRegulation.Components
                         EventMatchingTemplate = newEMT, //no es correcto el EMT, revisar.
                         AppraisalVariables = new AppraisalVariables(NewVariables)
                     };
-                    auxCharacter.m_emotionalAppraisalAsset.AddOrUpdateAppraisalRule(newAppRule);
-                    _auxEvent = EventHelper.ActionEnd(auxCharacter.CharacterName,newActionName, decision.Target);
+                    //auxCharacter.m_emotionalAppraisalAsset.AddOrUpdateAppraisalRule(newAppRule);
+                    agent.auxCharacter.m_emotionalAppraisalAsset.AddOrUpdateAppraisalRule(newAppRule);
+
+                    _auxEvent = EventHelper.ActionEnd(agent.auxCharacter.CharacterName,newActionName, decision.Target);
                     
-                    auxCharacter.Perceive(_auxEvent);
-                    _newEmotions = auxCharacter.GetAllActiveEmotions().ToList();
+                    //auxCharacter.Perceive(_auxEvent);
+                    agent.auxCharacter.Perceive(_auxEvent);
+                    //_newEmotions = auxCharacter.GetAllActiveEmotions().ToList();
+
+                    _newEmotions = agent.auxCharacter.GetAllActiveEmotions().ToList();
+                    agent.auxCharacter.ResetEmotionalState();
+                    agent.auxCharacter.ForgetEvent(0);
+                    agent.auxCharacter.m_emotionalAppraisalAsset.RemoveAppraisalRules(new List<AppraisalRuleDTO>() { newAppRule });
+
 
                     foreach (var _emo in _newEmotions)
                     {

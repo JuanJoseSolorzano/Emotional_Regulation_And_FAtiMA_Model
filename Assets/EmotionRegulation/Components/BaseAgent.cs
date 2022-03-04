@@ -4,6 +4,8 @@ using EmotionRegulation.Components;
 using RolePlayCharacter;
 using WellFormedNames;
 using ActionLibrary;
+using EmotionalAppraisal;
+using EmotionalAppraisal.DTOs;
 using System.Diagnostics;
 
 namespace EmotionRegulation.BigFiveModel
@@ -19,9 +21,11 @@ namespace EmotionRegulation.BigFiveModel
         public List<string> StrategiesToApply { get; private set; }
         public List<string> AllPersonalities { get; private set; }
         public RequiredData RequiredData { get; set; }
+        public EmotionRegulationModel Results { get => results; set => results = value; }
 
         internal PersonalityDTO personality;
-        internal EmotionRegulationModel results;
+        private EmotionRegulationModel results;
+        internal RolePlayCharacterAsset auxCharacter;
         public BaseAgent(RolePlayCharacterAsset agentFAtiMA, PersonalityDTO personalityDTO, RequiredData info)
         {
             if (personalityDTO is null)
@@ -50,6 +54,12 @@ namespace EmotionRegulation.BigFiveModel
             AllPersonalities = BigFive.AllPersonalities;
             StrategyMetrics = BigFive.StrategyMetrics;
             this.personality = personalityDTO;
+            var copyAppraisalRules = FAtiMACharacter.m_emotionalAppraisalAsset.GetAllAppraisalRules();
+            var auxEA = new EmotionalAppraisalAsset();
+            foreach (var appRule in copyAppraisalRules)
+                auxEA.AddOrUpdateAppraisalRule(appRule);
+            auxCharacter = new RolePlayCharacterAsset() { m_emotionalAppraisalAsset = auxEA };
+
         }
         /// <summary>
         /// Este método es el primer paso hacía la regualción de las emciones. Aquí se analizan todos los datos necesaríos 
@@ -90,9 +100,9 @@ namespace EmotionRegulation.BigFiveModel
                 ///     decision que probocará la emoción(s) negativa y el objeto creado data, el cual contiene los datos 
                 ///     necesarios para iniciar con la regulación.
                 ///-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                results = new EmotionRegulationModel(decision, data);
-
-                return results.newAction;
+                Results = new EmotionRegulationModel(decision, data);
+            
+                return Results.newAction;
             }
             else
                 return null;
