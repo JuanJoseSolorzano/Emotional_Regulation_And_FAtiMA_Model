@@ -83,20 +83,20 @@ namespace WellFormedNames
 				return this;
 			}
 
-			public override bool Match(Name name)
-			{
-				if (name.IsUniversal)
-					return true;
+                        public override bool Match(Name name)
+                        {
+                                if (name.IsUniversal)
+                                        return true;
 
-				PrimitiveSymbol s = name as PrimitiveSymbol;
-				if (s == null)
-					return false;
+                                PrimitiveSymbol s = name as PrimitiveSymbol;
+                                if (s == null)
+                                        return false;
 
-                if (m_value == null)
-                    return false;
+                                if (m_value == null)
+                                        return s.m_value == null;
 
-				return m_value.Equals(s.m_value);
-			}
+                                return s.m_value != null && m_value.Equals(s.m_value);
+                        }
 
 			public override string ToString()
 			{
